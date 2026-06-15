@@ -1,0 +1,74 @@
+[
+  {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "Bodija Market",
+    "category": "market",
+    "coordinate": { "latitude": 7.43012, "longitude": 3.90845 },
+    "summary": "One of the largest food markets in Ibadan, known for fresh produce, foodstuff and household goods.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=1200"
+  },
+  {
+    "id": "22222222-2222-2222-2222-222222222222",
+    "name": "Bashorun Junction",
+    "category": "junction",
+    "coordinate": { "latitude": 7.44820, "longitude": 3.92710 },
+    "summary": "Busy road junction linking Bashorun to Akobo and the Ibadan ring road.",
+    "address": "Bashorun, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "33333333-3333-3333-3333-333333333333",
+    "name": "UI Second Gate",
+    "category": "landmark",
+    "coordinate": { "latitude": 7.43560, "longitude": 3.90120 },
+    "summary": "Well-known entrance to the University of Ibadan, a major landmark and transport hub.",
+    "address": "University of Ibadan, Ibadan",
+    "imageURL": "https://images.unsplash.com/photo-1562774053-701939374585?w=1200"
+  },
+  {
+    "id": "44444444-4444-4444-4444-444444444444",
+    "name": "Bodija Police Station",
+    "category": "other",
+    "coordinate": { "latitude": 7.42960, "longitude": 3.91230 },
+    "summary": "Divisional police station serving the Bodija area.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "55555555-5555-5555-5555-555555555555",
+    "name": "The Palms Restaurant, Bodija",
+    "category": "restaurant",
+    "coordinate": { "latitude": 7.43180, "longitude": 3.90990 },
+    "summary": "Popular local restaurant serving Nigerian and continental dishes.",
+    "address": "Awolowo Avenue, Bodija, Ibadan",
+    "imageURL": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200"
+  },
+  {
+    "id": "66666666-6666-6666-6666-666666666666",
+    "name": "Bashorun Community Grammar School",
+    "category": "school",
+    "coordinate": { "latitude": 7.44650, "longitude": 3.92410 },
+    "summary": "Secondary school in the heart of the Bashorun community.",
+    "address": "Bashorun, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "77777777-7777-7777-7777-777777777777",
+    "name": "NNPC Filling Station, Bodija",
+    "category": "fuel",
+    "coordinate": { "latitude": 7.43350, "longitude": 3.91470 },
+    "summary": "Fuel station along the main Bodija road.",
+    "address": "Bodija Road, Ibadan",
+    "imageURL": null
+  },
+  {
+    "id": "88888888-8888-8888-8888-888888888888",
+    "name": "Our Lady of Apostles, Bodija",
+    "category": "worship",
+    "coordinate": { "latitude": 7.42780, "longitude": 3.90610 },
+    "summary": "Catholic church and a recognised landmark in the Bodija estate.",
+    "address": "Bodija Estate, Ibadan",
+    "imageURL": null
+  }
+]

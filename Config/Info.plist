@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Mapbox reads this automatically. Value is substituted from MAPBOX_PUBLIC_TOKEN
+	     (defined in Config/Secrets.xcconfig) at build time. Apple's auto-generated
+	     Info.plist keys (scene manifest, launch screen, orientations, etc.) are still
+	     merged on top of this file because GENERATE_INFOPLIST_FILE remains YES. -->
+	<key>MBXAccessToken</key>
+	<string>$(MAPBOX_PUBLIC_TOKEN)</string>
+</dict>
+</plist>
