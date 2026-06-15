@@ -3,16 +3,16 @@
 //  navigatohh
 //
 //  Detail view for a single POI. The hero image is loaded through Kingfisher (RemoteImage).
-//  "Navigate here" is a stub seam for the future Mapbox Navigation SDK integration.
+//  "Navigate here" starts a route via the shared NavigationSession and jumps to the map.
 //
 
 import SwiftUI
-import OSLog
 
 struct PlaceDetailScreen: View {
     let placeID: UUID
 
     @Environment(\.dependencies) private var dependencies
+    @Environment(\.router) private var router
     @State private var viewModel: PlaceDetailViewModel?
 
     var body: some View {
@@ -32,6 +32,19 @@ struct PlaceDetailScreen: View {
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if case let .loaded(place) = viewModel?.state {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dependencies.userDataStore.toggleFavorite(place)
+                    } label: {
+                        Image(systemName: dependencies.userDataStore.isFavorite(place.id) ? "heart.fill" : "heart")
+                    }
+                    .tint(.pink)
+                    .accessibilityLabel(dependencies.userDataStore.isFavorite(place.id) ? "Remove from favorites" : "Add to favorites")
+                }
+            }
+        }
         .task {
             guard viewModel == nil else { return }
             let vm = PlaceDetailViewModel(placeID: placeID, repository: dependencies.placesRepository)
@@ -65,8 +78,11 @@ struct PlaceDetailScreen: View {
                     .font(AppTypography.body)
 
                 Button {
-                    // TODO: integrate Mapbox Navigation SDK for turn-by-turn routing.
-                    AppLogger.map.info("Navigate-here requested for \(place.name, privacy: .public)")
+                    // Switch to the map, clear this stack, and start routing. The map's
+                    // banner reflects the shared NavigationSession state.
+                    router.selectedTab = .map
+                    router.popToRoot()
+                    Task { await dependencies.navigationSession.start(to: place) }
                 } label: {
                     Label("Navigate here", systemImage: "location.north.line.fill")
                         .frame(maxWidth: .infinity)

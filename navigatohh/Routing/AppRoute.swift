@@ -16,6 +16,7 @@ enum AppRoute: Hashable {
 enum AppTab: Hashable, CaseIterable, Identifiable {
     case map
     case search
+    case saved
     case immersive
 
     var id: Self { self }
@@ -24,6 +25,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         switch self {
         case .map:       return "Map"
         case .search:    return "Search"
+        case .saved:     return "Saved"
         case .immersive: return "3D"
         }
     }
@@ -32,6 +34,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         switch self {
         case .map:       return "map.fill"
         case .search:    return "magnifyingglass"
+        case .saved:     return "heart.fill"
         case .immersive: return "cube.transparent.fill"
         }
     }

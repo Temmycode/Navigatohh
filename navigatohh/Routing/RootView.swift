@@ -33,6 +33,12 @@ struct RootView: View {
             .tabItem { Label(AppTab.search.title, systemImage: AppTab.search.symbolName) }
             .tag(AppTab.search)
 
+            NavigationStack {
+                SavedScreen()
+            }
+            .tabItem { Label(AppTab.saved.title, systemImage: AppTab.saved.symbolName) }
+            .tag(AppTab.saved)
+
             if AppConfiguration.FeatureFlags.immersiveModeEnabled {
                 NavigationStack {
                     ImmersiveSceneView()

@@ -23,7 +23,10 @@ struct SearchScreen: View {
         .navigationTitle("Search")
         .task {
             guard viewModel == nil else { return }
-            let vm = SearchViewModel(repository: dependencies.placesRepository)
+            let vm = SearchViewModel(
+                repository: dependencies.placesRepository,
+                locationService: dependencies.locationService
+            )
             viewModel = vm
             await vm.loadInitial()
         }
@@ -40,16 +43,24 @@ struct SearchScreen: View {
                     .listRowBackground(Color.clear)
             }
 
-            if viewModel.results.isEmpty {
+            if viewModel.displayResults.isEmpty {
                 ContentUnavailableView.search
             } else {
-                ForEach(viewModel.results) { place in
-                    Button {
-                        router.showPlace(place.id)
-                    } label: {
-                        placeRow(place)
+                Section {
+                    ForEach(viewModel.displayResults) { place in
+                        Button {
+                            router.showPlace(place.id)
+                        } label: {
+                            PlaceRow(place: place, trailingText: viewModel.distanceText(for: place))
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                } header: {
+                    if viewModel.isShowingNearby {
+                        Label("Nearby", systemImage: "location.fill")
+                            .font(AppTypography.caption)
+                            .textCase(nil)
+                    }
                 }
             }
         }
@@ -78,27 +89,6 @@ struct SearchScreen: View {
         }
     }
 
-    private func placeRow(_ place: PointOfInterest) -> some View {
-        HStack(spacing: AppSpacing.md) {
-            Image(systemName: place.category.symbolName)
-                .foregroundStyle(place.category.tint)
-                .frame(width: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(place.name)
-                    .font(AppTypography.headline)
-                if let address = place.address {
-                    Text(address)
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.secondaryText)
-                }
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(AppColors.secondaryText)
-        }
-        .padding(.vertical, AppSpacing.xs)
-    }
 }
 
 private struct FilterChip: View {

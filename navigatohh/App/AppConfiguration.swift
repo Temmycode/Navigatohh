@@ -22,6 +22,15 @@ enum AppConfiguration {
 
         /// Mapbox Standard style — ships with 3D buildings and lighting out of the box.
         static let styleURI = "mapbox://styles/mapbox/standard"
+
+        // MARK: Offline region (bounding box covering Bashorun/Bodija)
+
+        /// South-west corner of the offline download area.
+        static let offlineSouthWest = Coordinate(latitude: 7.405, longitude: 3.880)
+        /// North-east corner of the offline download area.
+        static let offlineNorthEast = Coordinate(latitude: 7.470, longitude: 3.945)
+        /// Zoom levels to cache offline (neighbourhood → street level).
+        static let offlineZoomRange: ClosedRange<UInt8> = 10...16
     }
 
     // MARK: - Feature flags

@@ -16,17 +16,37 @@ import SwiftUI
 final class AppDependencies {
     let placesRepository: any PlacesRepository
     let locationService: LocationService
+    let routeService: any RouteService
+    let navigationSession: NavigationSession
+    let offlineMapManager: OfflineMapManager
+    let userDataStore: UserDataStore
 
     /// Default composition used by the app and the environment fallback.
     init() {
+        let location = LocationService()
+        let routes = MapboxRouteService(accessToken: AppSecrets.mapboxPublicToken)
+        let userData = UserDataStore()
         self.placesRepository = LocalPlacesRepository()
-        self.locationService = LocationService()
+        self.locationService = location
+        self.routeService = routes
+        self.userDataStore = userData
+        self.navigationSession = NavigationSession(routeService: routes, locationService: location, userDataStore: userData)
+        self.offlineMapManager = OfflineMapManager()
     }
 
     /// Injecting initializer for tests and previews.
-    init(placesRepository: any PlacesRepository, locationService: LocationService) {
+    init(
+        placesRepository: any PlacesRepository,
+        locationService: LocationService,
+        routeService: any RouteService
+    ) {
+        let userData = UserDataStore()
         self.placesRepository = placesRepository
         self.locationService = locationService
+        self.routeService = routeService
+        self.userDataStore = userData
+        self.navigationSession = NavigationSession(routeService: routeService, locationService: locationService, userDataStore: userData)
+        self.offlineMapManager = OfflineMapManager()
     }
 }
 
