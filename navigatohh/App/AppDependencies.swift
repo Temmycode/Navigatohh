@@ -17,6 +17,7 @@ final class AppDependencies {
     let placesRepository: any PlacesRepository
     let locationService: LocationService
     let routeService: any RouteService
+    let geocodingService: any GeocodingService
     let navigationSession: NavigationSession
     let offlineMapManager: OfflineMapManager
     let userDataStore: UserDataStore
@@ -29,6 +30,7 @@ final class AppDependencies {
         self.placesRepository = LocalPlacesRepository()
         self.locationService = location
         self.routeService = routes
+        self.geocodingService = MapboxGeocodingService(accessToken: AppSecrets.mapboxPublicToken)
         self.userDataStore = userData
         self.navigationSession = NavigationSession(routeService: routes, locationService: location, userDataStore: userData)
         self.offlineMapManager = OfflineMapManager()
@@ -38,12 +40,14 @@ final class AppDependencies {
     init(
         placesRepository: any PlacesRepository,
         locationService: LocationService,
-        routeService: any RouteService
+        routeService: any RouteService,
+        geocodingService: any GeocodingService
     ) {
         let userData = UserDataStore()
         self.placesRepository = placesRepository
         self.locationService = locationService
         self.routeService = routeService
+        self.geocodingService = geocodingService
         self.userDataStore = userData
         self.navigationSession = NavigationSession(routeService: routeService, locationService: locationService, userDataStore: userData)
         self.offlineMapManager = OfflineMapManager()

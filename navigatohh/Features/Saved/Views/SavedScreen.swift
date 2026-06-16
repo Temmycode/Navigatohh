@@ -25,10 +25,15 @@ struct SavedScreen: View {
             } else {
                 List {
                     if !store.favorites.isEmpty {
-                        Section("Favorites") {
+                        Section {
                             ForEach(store.favorites) { place in
                                 row(place, store: store)
                             }
+                        } header: {
+                            Label("Favorites", systemImage: "heart.fill")
+                                .font(AppTypography.caption.weight(.semibold))
+                                .foregroundStyle(.pink)
+                                .textCase(nil)
                         }
                     }
 
@@ -39,12 +44,15 @@ struct SavedScreen: View {
                             }
                         } header: {
                             HStack {
-                                Text("Recent")
+                                Label("Recent", systemImage: "clock.arrow.circlepath")
+                                    .font(AppTypography.caption.weight(.semibold))
+                                    .foregroundStyle(AppColors.accent)
                                 Spacer()
                                 Button("Clear") { store.clearRecents() }
                                     .font(AppTypography.caption)
-                                    .textCase(nil)
+                                    .tint(AppColors.accent)
                             }
+                            .textCase(nil)
                         }
                     }
                 }
@@ -59,7 +67,7 @@ struct SavedScreen: View {
         let origin = dependencies.locationService.currentLocation?.coordinate
         let distance = origin.map { DistanceFormatter.string(meters: place.coordinate.distance(to: $0)) }
         return Button {
-            router.showPlace(place.id)
+            router.showPlace(place)
         } label: {
             PlaceRow(place: place, trailingText: distance)
         }

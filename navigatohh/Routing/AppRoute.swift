@@ -9,7 +9,7 @@
 import Foundation
 
 enum AppRoute: Hashable {
-    case placeDetail(placeID: UUID)
+    case placeDetail(PointOfInterest)
 }
 
 /// The top-level tabs of the app.

@@ -52,8 +52,8 @@ struct RootView: View {
     @ViewBuilder
     private func destination(for route: AppRoute) -> some View {
         switch route {
-        case let .placeDetail(placeID):
-            PlaceDetailScreen(placeID: placeID)
+        case let .placeDetail(place):
+            PlaceDetailScreen(place: place)
         }
     }
 }

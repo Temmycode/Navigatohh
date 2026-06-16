@@ -25,6 +25,7 @@ struct SearchScreen: View {
             guard viewModel == nil else { return }
             let vm = SearchViewModel(
                 repository: dependencies.placesRepository,
+                geocodingService: dependencies.geocodingService,
                 locationService: dependencies.locationService
             )
             viewModel = vm
@@ -49,7 +50,7 @@ struct SearchScreen: View {
                 Section {
                     ForEach(viewModel.displayResults) { place in
                         Button {
-                            router.showPlace(place.id)
+                            router.focusOnMap(place)
                         } label: {
                             PlaceRow(place: place, trailingText: viewModel.distanceText(for: place))
                         }
@@ -58,6 +59,10 @@ struct SearchScreen: View {
                 } header: {
                     if viewModel.isShowingNearby {
                         Label("Nearby", systemImage: "location.fill")
+                            .font(AppTypography.caption)
+                            .textCase(nil)
+                    } else {
+                        Text("Results")
                             .font(AppTypography.caption)
                             .textCase(nil)
                     }
@@ -105,13 +110,16 @@ private struct FilterChip: View {
                 }
                 Text(title)
             }
-            .font(AppTypography.caption)
+            .font(AppTypography.caption.weight(isSelected ? .semibold : .regular))
             .padding(.horizontal, AppSpacing.md)
             .padding(.vertical, AppSpacing.sm)
-            .background(
-                isSelected ? AppColors.accent : AppColors.secondaryBackground,
-                in: Capsule()
-            )
+            .background {
+                if isSelected {
+                    Capsule().fill(AppColors.brandGradient)
+                } else {
+                    Capsule().fill(AppColors.secondaryBackground)
+                }
+            }
             .foregroundStyle(isSelected ? Color.white : AppColors.primaryText)
         }
         .buttonStyle(.plain)

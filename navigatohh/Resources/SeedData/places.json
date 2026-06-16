@@ -70,5 +70,149 @@
     "summary": "Catholic church and a recognised landmark in the Bodija estate.",
     "address": "Bodija Estate, Ibadan",
     "imageURL": null
+  },
+  {
+    "id": "a0000001-0000-4000-8000-000000000009",
+    "name": "Bodija Shopping Complex",
+    "category": "market",
+    "coordinate": { "latitude": 7.42900, "longitude": 3.91000 },
+    "summary": "Cluster of shops and stores for groceries, electronics and everyday needs.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a0000002-0000-4000-8000-000000000010",
+    "name": "First Bank, Bodija",
+    "category": "bank",
+    "coordinate": { "latitude": 7.43050, "longitude": 3.90950 },
+    "summary": "Bank branch with ATMs on the Bodija main road.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a0000003-0000-4000-8000-000000000011",
+    "name": "GTBank, Bodija",
+    "category": "bank",
+    "coordinate": { "latitude": 7.43120, "longitude": 3.91200 },
+    "summary": "Guaranty Trust Bank branch and ATM gallery.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a0000004-0000-4000-8000-000000000012",
+    "name": "HealthPlus Pharmacy, Bodija",
+    "category": "pharmacy",
+    "coordinate": { "latitude": 7.43000, "longitude": 3.90800 },
+    "summary": "Pharmacy and convenience store for medicines and wellness products.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a0000005-0000-4000-8000-000000000013",
+    "name": "Bodija Central Mosque",
+    "category": "worship",
+    "coordinate": { "latitude": 7.42880, "longitude": 3.90750 },
+    "summary": "Central mosque serving the Bodija community.",
+    "address": "Bodija Estate, Ibadan",
+    "imageURL": null
+  },
+  {
+    "id": "a0000006-0000-4000-8000-000000000014",
+    "name": "Davies Hotel, Bodija",
+    "category": "hotel",
+    "coordinate": { "latitude": 7.43300, "longitude": 3.91300 },
+    "summary": "Comfortable lodging with restaurant and event facilities.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a0000007-0000-4000-8000-000000000015",
+    "name": "Chicken Republic, Bodija",
+    "category": "restaurant",
+    "coordinate": { "latitude": 7.43150, "longitude": 3.91050 },
+    "summary": "Fast-food spot for chicken, rice and snacks.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a0000008-0000-4000-8000-000000000016",
+    "name": "Sumal Foods Supermarket",
+    "category": "market",
+    "coordinate": { "latitude": 7.43080, "longitude": 3.91120 },
+    "summary": "Supermarket for groceries and packaged goods.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a0000009-0000-4000-8000-000000000017",
+    "name": "Total Filling Station, Bashorun",
+    "category": "fuel",
+    "coordinate": { "latitude": 7.44700, "longitude": 3.92650 },
+    "summary": "Fuel station near Bashorun junction.",
+    "address": "Bashorun, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a000000a-0000-4000-8000-000000000018",
+    "name": "Bashorun Mall",
+    "category": "market",
+    "coordinate": { "latitude": 7.44800, "longitude": 3.92900 },
+    "summary": "Shopping mall with retail stores, eateries and services.",
+    "address": "Bashorun, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a000000b-0000-4000-8000-000000000019",
+    "name": "Bodija International School",
+    "category": "school",
+    "coordinate": { "latitude": 7.43200, "longitude": 3.91600 },
+    "summary": "Private school in the Bodija residential area.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a000000c-0000-4000-8000-000000000020",
+    "name": "Agbowo Shopping Complex",
+    "category": "market",
+    "coordinate": { "latitude": 7.44200, "longitude": 3.90050 },
+    "summary": "Busy shopping complex opposite the University of Ibadan.",
+    "address": "Agbowo, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a000000d-0000-4000-8000-000000000021",
+    "name": "UI Zoological Garden",
+    "category": "park",
+    "coordinate": { "latitude": 7.44300, "longitude": 3.89900 },
+    "summary": "Zoo and green space within the University of Ibadan.",
+    "address": "University of Ibadan, Ibadan",
+    "imageURL": null
+  },
+  {
+    "id": "a000000e-0000-4000-8000-000000000022",
+    "name": "Akobo Junction",
+    "category": "junction",
+    "coordinate": { "latitude": 7.45500, "longitude": 3.93400 },
+    "summary": "Major junction linking Bashorun, Akobo and Ojurin.",
+    "address": "Akobo, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a000000f-0000-4000-8000-000000000023",
+    "name": "Bodija Post Office",
+    "category": "other",
+    "coordinate": { "latitude": 7.42920, "longitude": 3.90880 },
+    "summary": "Local post office for mail and parcel services.",
+    "address": "Bodija, Ibadan, Oyo State",
+    "imageURL": null
+  },
+  {
+    "id": "a0000010-0000-4000-8000-000000000024",
+    "name": "Mountain of Fire Ministries, Bashorun",
+    "category": "worship",
+    "coordinate": { "latitude": 7.44600, "longitude": 3.92500 },
+    "summary": "Church auditorium in the Bashorun area.",
+    "address": "Bashorun, Ibadan, Oyo State",
+    "imageURL": null
   }
 ]

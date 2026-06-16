@@ -2,12 +2,9 @@
 //  MapScreen.swift
 //  navigatohh
 //
-//  The primary screen: a 3D Mapbox map of the Bashorun/Bodija area with POI annotations,
-//  a card for the currently selected place, a recenter control, and a navigation banner
-//  (distance + ETA) once a route is active.
-//
-//  The ViewModel depends on environment-injected services, so it's built lazily in `.task`
-//  rather than at `init` (where the environment isn't available yet).
+//  The primary screen: a 3D Mapbox map of the Bashorun/Bodija area. A single frosted-glass
+//  bottom sheet handles every state — selected place, finding-route, active navigation, and
+//  errors — so navigation feedback stays in one consistent place (no split top/bottom UI).
 //
 
 import SwiftUI
@@ -47,26 +44,34 @@ struct MapScreen: View {
                 userLocation: viewModel.userLocation,
                 route: viewModel.route,
                 recenterRequestID: viewModel.recenterRequestID,
-                onSelect: { viewModel.select($0) }
+                selectedCoordinate: viewModel.selectedPlace?.coordinate,
+                selectionFocusID: viewModel.selectionFocusID,
+                onSelect: { viewModel.select($0, focus: false) },
+                onDeselect: { viewModel.clearSelection() }
             )
             .ignoresSafeArea()
+            .onChange(of: router.pendingMapSelection) { _, place in
+                guard let place else { return }
+                viewModel.select(place, focus: true)
+                router.pendingMapSelection = nil
+            }
 
-            // Top: navigation + offline banners.
+            // Top: offline banner only (informational).
             VStack(spacing: AppSpacing.sm) {
-                navigationBanner(viewModel)
                 offlineBanner()
                 Spacer()
             }
             .padding(AppSpacing.md)
 
-            // Bottom-trailing: recenter control (hidden while a place card is shown).
-            if viewModel.selectedPlace == nil {
+            // Bottom-trailing: recenter — hidden while the sheet is up to avoid overlap.
+            if !isSheetVisible(viewModel) {
                 HStack {
                     Spacer()
                     recenterButton(viewModel)
                 }
                 .padding(.horizontal, AppSpacing.md)
                 .padding(.bottom, AppSpacing.md)
+                .transition(.opacity)
             }
 
             if case let .failed(message) = viewModel.loadState {
@@ -76,8 +81,10 @@ struct MapScreen: View {
                 .background(.regularMaterial)
             }
 
-            if let place = viewModel.selectedPlace {
-                selectedCard(place, viewModel: viewModel)
+            // One persistent glass sheet; only its CONTENT swaps between states, so the box
+            // never disappears/reappears (no flicker) while finding a route.
+            if isSheetVisible(viewModel) {
+                sheetContainer { sheetInner(viewModel) }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -85,63 +92,187 @@ struct MapScreen: View {
         .animation(.snappy, value: viewModel.navigationState)
     }
 
-    // MARK: - Navigation banner
+    private func isSheetVisible(_ viewModel: MapViewModel) -> Bool {
+        viewModel.selectedPlace != nil || viewModel.navigationState != .idle
+    }
 
+    // MARK: - Bottom sheet (single source of truth for selection + navigation)
+
+    /// A selected place takes priority over navigation state, so the user can always tap a new
+    /// place to preview/re-route — even mid-navigation. Closing the place card falls back to
+    /// the active-navigation summary.
     @ViewBuilder
-    private func navigationBanner(_ viewModel: MapViewModel) -> some View {
-        switch viewModel.navigationState {
-        case .idle:
-            EmptyView()
-        case .routing:
-            banner {
-                HStack(spacing: AppSpacing.sm) {
-                    ProgressView()
-                    Text("Finding route…").font(AppTypography.callout)
-                }
-            }
-        case .active:
-            if let route = viewModel.route {
-                banner {
-                    VStack(spacing: AppSpacing.sm) {
-                        HStack(spacing: AppSpacing.md) {
-                            Image(systemName: "location.north.line.fill")
-                                .foregroundStyle(AppColors.accent)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(viewModel.navigationDestination?.name ?? "Destination")
-                                    .font(AppTypography.headline)
-                                    .lineLimit(1)
-                                Text("\(route.formattedTravelTime) · \(route.formattedDistance)")
-                                    .font(AppTypography.caption)
-                                    .foregroundStyle(AppColors.secondaryText)
-                            }
-                            Spacer()
-                            Button("End", role: .destructive) { viewModel.endNavigation() }
-                                .buttonStyle(.bordered)
-                        }
-                        profilePicker(viewModel)
-                    }
-                }
-            }
-        case let .failed(message):
-            banner {
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                    Text(message).font(AppTypography.caption).lineLimit(2)
-                    Spacer()
-                    Button("Dismiss") { viewModel.endNavigation() }
-                        .font(AppTypography.caption)
-                }
+    private func sheetInner(_ viewModel: MapViewModel) -> some View {
+        if let place = viewModel.selectedPlace {
+            placeContent(place, viewModel: viewModel)
+        } else {
+            switch viewModel.navigationState {
+            case .routing:
+                routingContent(viewModel)
+            case .active:
+                activeContent(viewModel)
+            case let .failed(message):
+                failedContent(message, viewModel: viewModel)
+            case .idle:
+                EmptyView()
             }
         }
     }
 
-    private func banner<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        content()
-            .padding(AppSpacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-            .shadow(radius: 6, y: 3)
+    private func sheetContainer<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        VStack(spacing: AppSpacing.md) {
+            Capsule()
+                .fill(AppColors.secondaryText.opacity(0.35))
+                .frame(width: 40, height: 5)
+            content()
+        }
+        .padding(AppSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.bottom, AppSpacing.sm)
     }
+
+    // MARK: Selected place
+
+    @ViewBuilder
+    private func placeContent(_ place: PointOfInterest, viewModel: MapViewModel) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack(spacing: AppSpacing.md) {
+                Label(place.category.title, systemImage: place.category.symbolName)
+                    .font(AppTypography.caption.weight(.semibold))
+                    .foregroundStyle(place.category.tint)
+                Spacer()
+                Button {
+                    dependencies.userDataStore.toggleFavorite(place)
+                } label: {
+                    Image(systemName: dependencies.userDataStore.isFavorite(place.id) ? "heart.fill" : "heart")
+                        .foregroundStyle(.pink)
+                }
+                .accessibilityLabel(dependencies.userDataStore.isFavorite(place.id) ? "Remove from favorites" : "Add to favorites")
+                Button {
+                    viewModel.clearSelection()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(AppColors.secondaryText)
+                }
+                .accessibilityLabel("Close")
+            }
+
+            Text(place.name)
+                .font(AppTypography.title)
+
+            if let address = place.address {
+                Text(address)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.secondaryText)
+                    .lineLimit(1)
+            }
+
+            if !place.summary.isEmpty {
+                Text(place.summary)
+                    .font(AppTypography.callout)
+                    .foregroundStyle(AppColors.secondaryText)
+                    .lineLimit(2)
+            }
+
+            profilePicker(viewModel)
+
+            HStack(spacing: AppSpacing.sm) {
+                Button {
+                    Task { await viewModel.startNavigation(to: place) }
+                } label: {
+                    Label("Directions", systemImage: "location.north.line.fill")
+                }
+                .buttonStyle(.gradient)
+
+                Button {
+                    router.push(.placeDetail(place))
+                } label: {
+                    Text("Details")
+                        .font(AppTypography.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+                .background(AppColors.secondaryBackground, in: RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous))
+                .foregroundStyle(AppColors.primaryText)
+            }
+        }
+    }
+
+    // MARK: Finding route
+
+    private func routingContent(_ viewModel: MapViewModel) -> some View {
+        HStack(spacing: AppSpacing.md) {
+            ProgressView()
+                .controlSize(.large)
+                .tint(AppColors.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Finding route…")
+                    .font(AppTypography.headline)
+                Text("to \(viewModel.navigationDestination?.name ?? "destination")")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.secondaryText)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Button("Cancel") { viewModel.endNavigation() }
+                .font(AppTypography.callout)
+                .tint(AppColors.accent)
+        }
+    }
+
+    // MARK: Active navigation
+
+    private func activeContent(_ viewModel: MapViewModel) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack(alignment: .top, spacing: AppSpacing.md) {
+                Image(systemName: "location.north.line.fill")
+                    .font(.title3)
+                    .foregroundStyle(AppColors.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    if let route = viewModel.route {
+                        Text(route.formattedTravelTime)
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(AppColors.accent)
+                        Text("\(route.formattedDistance) · \(viewModel.navigationDestination?.name ?? "destination")")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(AppColors.secondaryText)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+                Button(role: .destructive) {
+                    viewModel.endNavigation()
+                } label: {
+                    Text("End").font(AppTypography.headline)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+            }
+            profilePicker(viewModel)
+        }
+    }
+
+    // MARK: Failed
+
+    private func failedContent(_ message: String, viewModel: MapViewModel) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            Text(message)
+                .font(AppTypography.callout)
+                .lineLimit(2)
+            Spacer()
+            Button("Dismiss") { viewModel.endNavigation() }
+                .font(AppTypography.callout)
+                .tint(AppColors.accent)
+        }
+    }
+
+    // MARK: - Shared controls
 
     /// Segmented driving/walking/cycling picker bound to the shared navigation session.
     private func profilePicker(_ viewModel: MapViewModel) -> some View {
@@ -157,6 +288,19 @@ struct MapScreen: View {
             }
         }
         .pickerStyle(.segmented)
+    }
+
+    private func recenterButton(_ viewModel: MapViewModel) -> some View {
+        Button {
+            viewModel.recenter()
+        } label: {
+            Image(systemName: "location.fill")
+                .font(.headline)
+                .foregroundStyle(AppColors.accent)
+                .padding(AppSpacing.md)
+                .glassCard(cornerRadius: 28)
+        }
+        .accessibilityLabel("Recenter on my location")
     }
 
     // MARK: - Offline map banner
@@ -205,76 +349,11 @@ struct MapScreen: View {
         }
     }
 
-    private func recenterButton(_ viewModel: MapViewModel) -> some View {
-        Button {
-            viewModel.recenter()
-        } label: {
-            Image(systemName: "location.fill")
-                .font(.headline)
-                .padding(AppSpacing.md)
-                .background(AppColors.surface, in: Circle())
-                .shadow(radius: 4, y: 2)
-        }
-        .tint(AppColors.accent)
-        .accessibilityLabel("Recenter on my location")
-    }
-
-    // MARK: - Selected place card
-
-    private func selectedCard(_ place: PointOfInterest, viewModel: MapViewModel) -> some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            HStack(spacing: AppSpacing.md) {
-                Label(place.category.title, systemImage: place.category.symbolName)
-                    .font(AppTypography.caption)
-                    .foregroundStyle(place.category.tint)
-                Spacer()
-                Button {
-                    dependencies.userDataStore.toggleFavorite(place)
-                } label: {
-                    Image(systemName: dependencies.userDataStore.isFavorite(place.id) ? "heart.fill" : "heart")
-                        .foregroundStyle(.pink)
-                }
-                .accessibilityLabel(dependencies.userDataStore.isFavorite(place.id) ? "Remove from favorites" : "Add to favorites")
-                Button {
-                    viewModel.clearSelection()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(AppColors.secondaryText)
-                }
-            }
-
-            Text(place.name)
-                .font(AppTypography.title)
-
-            Text(place.summary)
-                .font(AppTypography.callout)
-                .foregroundStyle(AppColors.secondaryText)
-                .lineLimit(2)
-
-            profilePicker(viewModel)
-
-            HStack(spacing: AppSpacing.sm) {
-                Button {
-                    Task { await viewModel.startNavigation(to: place) }
-                } label: {
-                    Label("Directions", systemImage: "location.north.line.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(AppColors.accent)
-
-                Button {
-                    router.push(.placeDetail(placeID: place.id))
-                } label: {
-                    Text("Details").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-        .padding(AppSpacing.md)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-        .shadow(radius: 8, y: 4)
-        .padding(AppSpacing.md)
+    private func banner<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .padding(AppSpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassCard(cornerRadius: AppRadius.card)
     }
 }
 

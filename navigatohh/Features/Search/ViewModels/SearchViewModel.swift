@@ -2,8 +2,9 @@
 //  SearchViewModel.swift
 //  navigatohh
 //
-//  Backs SearchScreen: filters POIs by free-text query and optional category, and orders
-//  results by distance from the user's current location ("nearby" first).
+//  Backs SearchScreen. Empty query → nearby bundled places (distance-sorted). Text query →
+//  bundled matches first, then real-world places from the Mapbox Geocoding API, merged and
+//  deduped. Distance to each place is annotated when a location fix is available.
 //
 
 import Observation
@@ -21,11 +22,17 @@ final class SearchViewModel {
     private(set) var results: [PointOfInterest] = []
 
     private let repository: any PlacesRepository
+    private let geocodingService: any GeocodingService
     private let locationService: LocationService
     private var searchTask: Task<Void, Never>?
 
-    init(repository: any PlacesRepository, locationService: LocationService) {
+    init(
+        repository: any PlacesRepository,
+        geocodingService: any GeocodingService,
+        locationService: LocationService
+    ) {
         self.repository = repository
+        self.geocodingService = geocodingService
         self.locationService = locationService
     }
 
@@ -33,15 +40,14 @@ final class SearchViewModel {
         locationService.currentLocation?.coordinate
     }
 
-    /// True when results are being ordered by proximity (location available + no text query).
+    /// True when results are the proximity-ordered nearby list (location available + no query).
     var isShowingNearby: Bool {
         userLocation != nil && query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// Results ordered by distance from the user when a location fix is available.
-    /// Computed (not stored) so the order updates live as the location changes.
+    /// Nearby mode sorts by distance; text-query mode keeps the merged relevance order.
     var displayResults: [PointOfInterest] {
-        guard let origin = userLocation else { return results }
+        guard isShowingNearby, let origin = userLocation else { return results }
         return results.sorted { $0.coordinate.distance(to: origin) < $1.coordinate.distance(to: origin) }
     }
 
@@ -51,7 +57,6 @@ final class SearchViewModel {
         await runSearch()
     }
 
-    /// Formatted distance from the user to a place, or nil if no location fix yet.
     func distanceText(for place: PointOfInterest) -> String? {
         guard let origin = userLocation else { return nil }
         return DistanceFormatter.string(meters: place.coordinate.distance(to: origin))
@@ -63,13 +68,35 @@ final class SearchViewModel {
     }
 
     private func runSearch() async {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-            let found = try await repository.search(query: query, category: selectedCategory)
+            let local = try await repository.search(query: query, category: selectedCategory)
             guard !Task.isCancelled else { return }
-            results = found
+
+            // Empty query, or a category filter active → bundled places only.
+            guard !trimmed.isEmpty, selectedCategory == nil else {
+                results = local
+                return
+            }
+
+            // Text query → also query global geocoding (best-effort; ignore offline/failures).
+            let remote = (try? await geocodingService.search(query: trimmed, proximity: userLocation)) ?? []
+            guard !Task.isCancelled else { return }
+            results = merge(local: local, remote: remote)
         } catch {
             AppLogger.data.error("Search failed: \(error.localizedDescription, privacy: .public)")
             results = []
         }
+    }
+
+    /// Bundled matches first, then geocoding results, deduped by name + rounded coordinate.
+    private func merge(local: [PointOfInterest], remote: [PointOfInterest]) -> [PointOfInterest] {
+        var seen = Set<String>()
+        func key(_ p: PointOfInterest) -> String {
+            let lat = Int((p.coordinate.latitude * 1000).rounded())
+            let lon = Int((p.coordinate.longitude * 1000).rounded())
+            return "\(p.name.lowercased())|\(lat)|\(lon)"
+        }
+        return (local + remote).filter { seen.insert(key($0)).inserted }
     }
 }

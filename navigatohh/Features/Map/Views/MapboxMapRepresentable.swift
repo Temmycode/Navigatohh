@@ -6,17 +6,18 @@
 //  buildings and lighting, so a pitched camera is all that's needed for the 3D look.
 //
 //  Responsibilities:
-//   - render POI annotations (tap -> onSelect)
+//   - render our seed POI annotations (tap -> onSelect)
+//   - make the style's BUILT-IN POIs tappable via the Interactions API (tap -> onSelect)
 //   - draw the active route as a line layer and frame it
-//   - center on the user the first time a location fix arrives
-//   - recenter on demand when `recenterRequestID` changes
+//   - show a selection marker + optionally focus the camera on the selected place
+//   - center on the user the first time a location fix arrives; recenter on demand
 //
-//  Note: targets the Mapbox Maps SDK v11 API. If you bump to a new major version, the
-//  annotation / camera / layer calls below are the most likely spots to need adjustment.
+//  Note: the `.standardPoi` featureset is `@_spi(Experimental)` in this SDK version.
 //
 
 import SwiftUI
 import MapboxMaps
+@_spi(Experimental) import MapboxMaps
 import OSLog
 
 struct MapboxMapRepresentable: UIViewRepresentable {
@@ -24,7 +25,10 @@ struct MapboxMapRepresentable: UIViewRepresentable {
     var userLocation: Coordinate?
     var route: NavigationRoute?
     var recenterRequestID: Int
+    var selectedCoordinate: Coordinate?
+    var selectionFocusID: Int
     var onSelect: (PointOfInterest) -> Void
+    var onDeselect: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onSelect: onSelect)
@@ -47,19 +51,49 @@ struct MapboxMapRepresentable: UIViewRepresentable {
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         mapView.location.options.puckType = .puck2D()
 
-        let manager = mapView.annotations.makePointAnnotationManager()
-        context.coordinator.annotationManager = manager
-        context.coordinator.mapView = mapView
+        let coordinator = context.coordinator
+        coordinator.mapView = mapView
+        coordinator.annotationManager = mapView.annotations.makePointAnnotationManager()
+        coordinator.selectionManager = mapView.annotations.makeCircleAnnotationManager()
+
+        // Interactions are evaluated in reverse registration order, so register the catch-all
+        // map tap FIRST (lowest priority) and the POI tap LAST. A tap on a built-in POI is
+        // handled by the POI interaction (returns true, stops propagation); a tap on empty map
+        // falls through to the catch-all and clears the selection — like Google Maps.
+        if let map = mapView.mapboxMap {
+            coordinator.mapTapToken = map.addInteraction(
+                TapInteraction { [weak coordinator] _ in
+                    coordinator?.onDeselect()
+                    return false
+                }
+            )
+            coordinator.interactionToken = map.addInteraction(
+                TapInteraction(.standardPoi) { [weak coordinator] feature, _ in
+                    guard let coordinator else { return false }
+                    let place = PointOfInterest.transient(
+                        name: feature.name ?? "Selected place",
+                        coordinate: feature.coordinate.coordinate,
+                        category: PlaceCategory(mapboxClass: feature.maki, maki: feature.group)
+                    )
+                    coordinator.onSelect(place)
+                    return true
+                }
+            )
+        }
 
         return mapView
     }
 
     func updateUIView(_ mapView: MapView, context: Context) {
-        context.coordinator.onSelect = onSelect
-        context.coordinator.render(places: places)
-        context.coordinator.updateRoute(route)
-        context.coordinator.centerOnUserIfNeeded(userLocation)
-        context.coordinator.handleRecenter(requestID: recenterRequestID, userLocation: userLocation)
+        let coordinator = context.coordinator
+        coordinator.onSelect = onSelect
+        coordinator.onDeselect = onDeselect
+        coordinator.render(places: places)
+        coordinator.updateRoute(route)
+        coordinator.updateSelectionMarker(selectedCoordinate)
+        coordinator.centerOnUserIfNeeded(userLocation)
+        coordinator.handleRecenter(requestID: recenterRequestID, userLocation: userLocation)
+        coordinator.handleSelectionFocus(id: selectionFocusID, coordinate: selectedCoordinate)
     }
 
     // MARK: - Coordinator
@@ -67,13 +101,19 @@ struct MapboxMapRepresentable: UIViewRepresentable {
     @MainActor
     final class Coordinator {
         var onSelect: (PointOfInterest) -> Void
+        var onDeselect: () -> Void = {}
         weak var mapView: MapView?
         var annotationManager: PointAnnotationManager?
+        var selectionManager: CircleAnnotationManager?
+        var interactionToken: Cancelable?
+        var mapTapToken: Cancelable?
 
         private var renderedPlaceIDs: [UUID] = []
         private var renderedRouteID: UUID?
+        private var renderedSelection: Coordinate?
         private var didInitialCenter = false
         private var lastRecenterID = 0
+        private var lastSelectionFocusID = 0
 
         private let routeSourceID = "navi-route-source"
         private let routeLayerID = "navi-route-layer"
@@ -82,7 +122,7 @@ struct MapboxMapRepresentable: UIViewRepresentable {
             self.onSelect = onSelect
         }
 
-        // MARK: Annotations
+        // MARK: Seed annotations
 
         func render(places: [PointOfInterest]) {
             let ids = places.map(\.id)
@@ -102,6 +142,25 @@ struct MapboxMapRepresentable: UIViewRepresentable {
                 }
                 return annotation
             }
+        }
+
+        // MARK: Selection marker
+
+        func updateSelectionMarker(_ coordinate: Coordinate?) {
+            guard coordinate != renderedSelection else { return }
+            renderedSelection = coordinate
+
+            guard let selectionManager else { return }
+            guard let coordinate else {
+                selectionManager.annotations = []
+                return
+            }
+            var circle = CircleAnnotation(centerCoordinate: coordinate.clCoordinate)
+            circle.circleRadius = 9
+            circle.circleColor = StyleColor(UIColor(AppColors.accent))
+            circle.circleStrokeWidth = 3
+            circle.circleStrokeColor = StyleColor(UIColor.white)
+            selectionManager.annotations = [circle]
         }
 
         // MARK: Route
@@ -160,33 +219,36 @@ struct MapboxMapRepresentable: UIViewRepresentable {
             mapView.camera.ease(to: camera, duration: 0.7)
         }
 
-        // MARK: Camera follow / recenter
+        // MARK: Camera follow / recenter / focus
 
         func centerOnUserIfNeeded(_ userLocation: Coordinate?) {
             guard !didInitialCenter, let userLocation, let mapView else { return }
             didInitialCenter = true
-            let camera = CameraOptions(
-                center: userLocation.clCoordinate,
-                zoom: 15.5,
-                bearing: AppConfiguration.Map.defaultBearing,
-                pitch: AppConfiguration.Map.defaultPitch
-            )
-            mapView.camera.ease(to: camera, duration: 0.7)
+            mapView.camera.ease(to: cameraOptions(for: userLocation), duration: 0.7)
         }
 
         func handleRecenter(requestID: Int, userLocation: Coordinate?) {
             guard requestID != lastRecenterID else { return }
             lastRecenterID = requestID
-
             guard let mapView else { return }
-            let center = (userLocation ?? AppConfiguration.Map.defaultCenter).clCoordinate
-            let camera = CameraOptions(
-                center: center,
-                zoom: 15.5,
+            let center = userLocation ?? AppConfiguration.Map.defaultCenter
+            mapView.camera.ease(to: cameraOptions(for: center), duration: 0.6)
+        }
+
+        func handleSelectionFocus(id: Int, coordinate: Coordinate?) {
+            guard id != lastSelectionFocusID else { return }
+            lastSelectionFocusID = id
+            guard let coordinate, let mapView else { return }
+            mapView.camera.ease(to: cameraOptions(for: coordinate, zoom: 16), duration: 0.6)
+        }
+
+        private func cameraOptions(for coordinate: Coordinate, zoom: Double = 15.5) -> CameraOptions {
+            CameraOptions(
+                center: coordinate.clCoordinate,
+                zoom: zoom,
                 bearing: AppConfiguration.Map.defaultBearing,
                 pitch: AppConfiguration.Map.defaultPitch
             )
-            mapView.camera.ease(to: camera, duration: 0.6)
         }
     }
 }

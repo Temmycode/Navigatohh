@@ -25,6 +25,8 @@ final class MapViewModel {
 
     /// Bumped to ask the map to recenter on the user. The representable observes the change.
     private(set) var recenterRequestID = 0
+    /// Bumped to ask the map to ease the camera onto the selected place.
+    private(set) var selectionFocusID = 0
 
     private let repository: any PlacesRepository
     private let locationService: LocationService
@@ -86,8 +88,11 @@ final class MapViewModel {
         }
     }
 
-    func select(_ place: PointOfInterest) {
+    /// Selects a place. `focus: true` also eases the camera to it (used for search / cross-tab
+    /// hand-off); direct map taps pass `focus: false` so the view doesn't jump.
+    func select(_ place: PointOfInterest, focus: Bool = false) {
         selectedPlace = place
+        if focus { selectionFocusID += 1 }
     }
 
     func clearSelection() {
